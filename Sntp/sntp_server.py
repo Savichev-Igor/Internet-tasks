@@ -20,7 +20,7 @@ PORT = 123
 def createParser():
     parser = argparse.ArgumentParser(
             prog='python sntp_server.py',
-            description="""Эта программа аналог sntp сервера, но врущий.
+            description="""Эта программа аналог sntp сервера, но врущего.
                         """,
             epilog='''(c) Puni, 2015. Автор программы, как всегда,
                       не несет никакой ответственности.

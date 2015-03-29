@@ -1,8 +1,11 @@
 # !/usr/bin/python
 # -*- coding: utf-8 -*-
+import sys
 import socket
-import struct
 import time
+
+import struct
+import argparse
 
 HOST = "127.0.0.1"
 PORT = 123
@@ -10,6 +13,20 @@ PORT = 123
 FORMAT = "BBBBII4sQQQQ"
 
 TIME1970 = 2208988800  # Thanks to F.Lundh
+
+
+def createParser():
+    parser = argparse.ArgumentParser(
+            prog='python sntp_client.py',
+            description="""Это клиент для sntp server'a.
+                           Поставляется вместе с sntp сервером,
+                           смотреть в папке.
+                        """,
+            epilog='''(c) Puni, 2015. Автор программы, как всегда,
+                      не несет никакой ответственности.
+                   '''
+            )
+    return parser
 
 
 class Client():
@@ -55,6 +72,8 @@ class Client():
 
 
 def main():
+    p = createParser()
+    p.parse_args()
     A = Client()
     A.send_request()
     time = A.get_reply()
