@@ -20,11 +20,14 @@ PORT = 123
 def createParser():
     parser = argparse.ArgumentParser(
             prog='python sntp_server.py',
-            description="""Эта программа аналог sntp сервера, но врущий""",
-            epilog='''(c) Puni ,2015. Автор программы, как всегда,
-                       не несет никакой ответственности.'''
+            description="""Эта программа аналог sntp сервера, но врущий.
+                           (Рекомендуется второй python)
+                        """,
+            epilog='''(c) Puni, 2015. Автор программы, как всегда,
+                      не несет никакой ответственности.
+                   '''
             )
-    parser.add_argument("--Offset", "-o", type=int, default=0,
+    parser.add_argument("Offset", type=int,
                         help="На сколько солгать")
     return parser
 

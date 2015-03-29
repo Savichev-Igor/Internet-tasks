@@ -12,9 +12,12 @@ import struct
 def createParser():
     parser = argparse.ArgumentParser(
             prog='python traceroute.py',
-            description="""Эта программа аналог Tracerout'a (Tracert)""",
-            epilog='''(c) Puni ,2015. Автор программы, как всегда,
-                       не несет никакой ответственности.'''
+            description="""Эта программа аналог Tracerout'a
+                           (Tracert)
+                        """,
+            epilog='''(c) Puni, 2015. Автор программы, как всегда,
+                       не несет никакой ответственности.
+                   '''
             )
     parser.add_argument('destination', type=str,
                         help="Ip адрес для трассировки")

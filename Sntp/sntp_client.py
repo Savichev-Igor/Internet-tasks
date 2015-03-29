@@ -9,10 +9,12 @@ HOST = "127.0.0.1"
 PORT = 123
 
 FORMAT = "BBBBII4sQQQQ"
+
 TIME1970 = 2208988800L  # Thanks to F.Lundh
 
 
 class Client():
+
     def __init__(self):
         self.packet = struct.Struct(FORMAT)
         self.s = socket.create_connection((HOST, PORT), 3.0)
