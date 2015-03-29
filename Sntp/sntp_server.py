@@ -11,7 +11,7 @@ import argparse
 
 FORMAT = "BBBBII4sQQQQ"
 
-TIME1970 = 2208988800L  # Thanks to F.Lundh
+TIME1970 = 2208988800  # Thanks to F.Lundh
 
 HOST = "0.0.0.0"
 PORT = 123
@@ -21,10 +21,9 @@ def createParser():
     parser = argparse.ArgumentParser(
             prog='python sntp_server.py',
             description="""Эта программа аналог sntp сервера, но врущий.
-                           (Рекомендуется второй python)
                         """,
             epilog='''(c) Puni, 2015. Автор программы, как всегда,
-                      не несет никакой ответственности.
+                       не несет никакой ответственности.
                    '''
             )
     parser.add_argument("Offset", type=int,
