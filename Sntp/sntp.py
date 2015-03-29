@@ -16,13 +16,13 @@ def main():
     s.connect((HOST, PORT))
     # print(struct.calcsize(FORMAT))
     packet = struct.Struct(FORMAT)
-    # packet_bin = packet.pack((4 << 3) | 3, 0, 0, 0, 0, 0, b'Hi', 0, 0, 0, 0)
+    packet_bin = packet.pack((4 << 3) | 3, 0, 0, 0, 0, 0, b'Hi', 0, 0, 0, 0)
     # packet_bin = packet.pack((4 << 3) | 3, 0, 0, 0)
     print('SEND')
     # s.sendall(packet_bin)
-    packet = b'35' + b'0'*46
+    # packet = b'35' + b'0'*46
     # print(packet)
-    s.sendall(packet)
+    s.sendall(packet_bin)
     print('RECV')
     packet_bin = s.recv(48)
     # print(struct)
