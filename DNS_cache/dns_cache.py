@@ -223,7 +223,7 @@ def main():
         s_UDP.bind((HOST, PORT))
         while True:
             data, addr = s_UDP.recvfrom(4096)
-            print(data, addr)
+            # print(data, addr)
             # print(cache)
             DNS_Server(data, addr, args.forwarder, args.f_port, s_UDP).start()
     except Exception as error:
