@@ -8,7 +8,7 @@ import sys
 import struct
 
 HOST = '127.0.0.1'  # Адрес сервера
-PORT = 53     # Порт сервера
+PORT = 8000  # Порт сервера
 
 
 cache = dict()  # Наш кэш
@@ -17,7 +17,8 @@ cache = dict()  # Наш кэш
 def createParser():
     parser = argparse.ArgumentParser(
             prog='python dns_cache.py',
-            description="""Эта программа выполняет функции кэширующего DNS сервера.
+            description="""Эта программа выполняет функции кэширующего DNS сервера
+                           на 127.0.0.1 8000
                         """,
             epilog='''(c) Puni, 2015. Автор программы, как всегда,
                       не несет никакой ответственности.
@@ -25,6 +26,8 @@ def createParser():
             )
     parser.add_argument("forwarder", type=str,
                         help="Вышестоящий сервер")
+    parser.add_argument("f_port", type=int,
+                        help="Порт вышестоящего сервера")
     return parser
 
 
@@ -157,12 +160,13 @@ class DNS_Packet():     # Класс для работы с DNS пакетом
 
 class DNS_Server(threading.Thread):
 
-    def __init__(self, data, client, forwarder, s_UDP):
+    def __init__(self, data, client, forwarder, f_port, s_UDP):
         threading.Thread.__init__(self)
         self.daemon = True
         self.data = data    # Оригинальный запрос
         self.client = client    # Кому отвечать
         self.forwarder = forwarder
+        self.f_port = f_port
         self.s_UDP = s_UDP
 
     def ask_forwarder(self, key):
@@ -170,7 +174,7 @@ class DNS_Server(threading.Thread):
         forwarder_s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         forwarder_s.settimeout(0.1)
         try:
-            forwarder_s.sendto(self.data, (self.forwarder, 53))  # Ориг-ный. запрос
+            forwarder_s.sendto(self.data, (self.forwarder, self.f_port))  # Ориг-ный. запрос
             response = forwarder_s.recv(4096)
             response_packet = DNS_Packet(response)
             response_packet.parse_answer()
@@ -212,15 +216,16 @@ def main():
     try:
         p = createParser()
         args = p.parse_args()
-        if args.forwarder == '127.0.0.1':
+        if args.forwarder == '127.0.0.1' and args.f_port == PORT:
             args.forwarder = '8.8.8.8'
+            args.f_port = 53
         s_UDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s_UDP.bind((HOST, PORT))
         while True:
             data, addr = s_UDP.recvfrom(4096)
-            # print(data, addr)
+            print(data, addr)
             # print(cache)
-            DNS_Server(data, addr, args.forwarder, s_UDP).start()
+            DNS_Server(data, addr, args.forwarder, args.f_port, s_UDP).start()
     except Exception as error:
         s_UDP.close()
         print(error)
