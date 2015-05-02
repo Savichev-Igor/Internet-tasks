@@ -174,13 +174,15 @@ class DNS_Server(threading.Thread):
         forwarder_s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         forwarder_s.settimeout(0.1)
         try:
-            forwarder_s.sendto(self.data, (self.forwarder, self.f_port))  # Ориг-ный. запрос
+            forwarder_s.sendto(self.data, (self.forwarder, self.f_port))
             response = forwarder_s.recv(4096)
             response_packet = DNS_Packet(response)
             response_packet.parse_answer()
             print(response_packet.QNAME)
             self.s_UDP.sendto(response_packet.data, self.client)
-            cache[key] = [response_packet, time.time(), response_packet.get_ttl(12+response_packet.len_name+4+6, 12+response_packet.len_name+4+10)]
+            begin = 12+response_packet.len_name+4+6
+            end = 12+response_packet.len_name+4+10
+            cache[key] = [response_packet, time.time(), response_packet.get_ttl(begin, end)]
             # print(cache)
         except socket.error:
             print("Wait a momemnt...")
