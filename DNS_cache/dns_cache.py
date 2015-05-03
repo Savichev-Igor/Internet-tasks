@@ -8,7 +8,7 @@ import sys
 import struct
 
 HOST = '127.0.0.1'  # Адрес сервера
-PORT = 8000  # Порт сервера
+PORT = 53  # Порт сервера
 
 
 cache = dict()  # Наш кэш
@@ -58,7 +58,7 @@ class DNS_Packet():     # Класс для работы с DNS пакетом
         name_length = 0
         for i in self.data[12:]:
             name_length += 1
-            if i == struct.pack("B", 0):
+            if i == 0 or i == struct.pack('B', 0):
                 break
         name = self.data[12:12+name_length]
         self.len_name = name_length
@@ -137,9 +137,8 @@ class DNS_Packet():     # Класс для работы с DNS пакетом
             RD_len = self.get_rdata_len(begin, end)
             # print(RD_len)
             # print(self.get_ttl(begin-4, end-2))
-            new_ttl = struct.pack('!I', cache_ttl - time.time() + cache_time)
+            new_ttl = struct.pack('!I', int(cache_ttl - time.time() + cache_time))
             self.data = self.data[0:begin-4] + new_ttl + self.data[end-2:]
-            # print(self.get_ttl(begin-4, end-2))
             begin += RD_len + 12
             end += RD_len + 12
 
@@ -147,15 +146,15 @@ class DNS_Packet():     # Класс для работы с DNS пакетом
         """ Просто функция обработки запроса"""
         self.get_header()
         self.get_q_name()
-        self.get_type('QUESTION')
-        self.get_class('QUESTION')
+        # self.get_type('QUESTION')
+        # self.get_class('QUESTION')
 
     def parse_answer(self):
         """ Просто функция обработки ответа """
         self.get_header()
         self.get_q_name()
-        self.get_type('ANSWER')
-        self.get_class('ANSWER')
+        # self.get_type('ANSWER')
+        # self.get_class('ANSWER')
 
 
 class DNS_Server(threading.Thread):
@@ -180,8 +179,8 @@ class DNS_Server(threading.Thread):
             response_packet.parse_answer()
             print(response_packet.QNAME)
             self.s_UDP.sendto(response_packet.data, self.client)
-            begin = 12+response_packet.len_name+4+6
-            end = 12+response_packet.len_name+4+10
+            begin = 12 + response_packet.len_name + 4 + 6
+            end = 12 + response_packet.len_name + 4 + 10
             cache[key] = [response_packet, time.time(), response_packet.get_ttl(begin, end)]
             # print(cache)
         except socket.error:
@@ -227,7 +226,7 @@ def main():
             data, addr = s_UDP.recvfrom(4096)
             # print(data, addr)
             # print(cache)
-            DNS_Server(data, addr, args.forwarder, args.f_port, s_UDP).start()
+            DNS_Server(data, addr, '8.8.8.8', 53, s_UDP).start()
     except Exception as error:
         s_UDP.close()
         print(error)
