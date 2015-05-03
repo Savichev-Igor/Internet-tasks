@@ -226,7 +226,7 @@ def main():
             data, addr = s_UDP.recvfrom(4096)
             # print(data, addr)
             # print(cache)
-            DNS_Server(data, addr, '8.8.8.8', 53, s_UDP).start()
+            DNS_Server(data, addr, args.forwarder, args.f_port, s_UDP).start()
     except Exception as error:
         s_UDP.close()
         print(error)
