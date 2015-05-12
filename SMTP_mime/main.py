@@ -100,20 +100,25 @@ class SMTP:
             sys.exit()
 
     def send_mail(self):
-        if self.type_security == "TLS":
-            self.connect_tls()
-            sock = self.tls_socket
-            self.auth(self.tls_socket)
-            self.body_letter(self.tls_socket)
-        elif self.type_security == "SSL":
-            self.connect_ssl()
-            sock = self.ssl_socket
-            self.auth(self.ssl_socket)
-            self.body_letter(self.ssl_socket)
-        elif not self.login and not self.password:
-            self.simple_connection()
-            sock = self.s
-            self.body_letter(sock)
+        try:
+            if self.type_security == "TLS":
+                self.connect_tls()
+                sock = self.tls_socket
+                self.auth(self.tls_socket)
+                self.body_letter(self.tls_socket)
+            elif self.type_security == "SSL":
+                self.connect_ssl()
+                sock = self.ssl_socket
+                self.auth(self.ssl_socket)
+                self.body_letter(self.ssl_socket)
+            elif not self.login and not self.password:
+                self.simple_connection()
+                sock = self.s
+                self.body_letter(sock)
+        except Exception as er:
+            print("\nSomething is going wrong...\n")
+            print(er)
+            sys.exit()
 
     def auth(self, socket):
         socket.send(b'AUTH LOGIN\r\n')
@@ -177,12 +182,14 @@ class SMTP:
             counter += 1
             if counter == len(dict_images):
                 files_template += image_b64_template.format(f[f.index(".")+1:], f) +\
-                                  "\r\n" + str(dict_images[f])[2:-1] + '\r\n' + '--xyz--\r\n'
+                                  "\r\n" + str(dict_images[f]) + '\r\n' + '--xyz--\r\n'
             else:
                 files_template += image_b64_template.format(f[f.index(".")+1:], f) +\
-                                  "\r\n" + str(dict_images[f])[2:-1] + '\r\n' + '--xyz\r\n'
+                                  "\r\n" + str(dict_images[f]) + '\r\n' + '--xyz\r\n'
         final_template = start_template.format(self.login) + to_template +\
                          message_template + attachments + files_template
+        with open("text.txt", "w") as t:
+            t.write(final_template)
         return final_template
 
     def ehlo(self, s):
@@ -214,7 +221,9 @@ class SMTP:
 
 def main():
     rcpt_to = "Ultimate95@mail.ru"
-    path = "C:/Users/Игорь/Desktop/Institute/Интернет (Практика)/Tasks/SMTP_mime/Pictures"
+    # path = "C:/Users/Игорь/Desktop/Institute/Интернет (Практика)/Tasks/SMTP_mime/Pictures"
+    path = "/home/savi/Рабочий стол/Интернет/Tasks/SMTP_mime/Pictures"
+    # s = SMTP("127.0.0.1", 25, rcpt_to, path)
     s = SMTP("smtp.mail.ru", 587, rcpt_to, path, "Rick_Grimes72@mail.ru", "123test")
     # s = SMTP("smtp.mail.ru", 465, rcpt_to, path, "Rick_Grimes72@mail.ru", "123test")
     s.send_mail()
