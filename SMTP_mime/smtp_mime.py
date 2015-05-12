@@ -1,11 +1,38 @@
 # !/usr/bin/python3
 # -*- coding: utf-8 -*-
 import sys
-from os import walk
+from os import walk, getcwd
 import ssl
 import socket
 import re
 import base64
+import argparse
+
+
+def createParser():
+    parser = argparse.ArgumentParser(
+            prog='python smtp_mime.py',
+            description="""Эта программа отправляет все картинки
+                           в виде вложений из указанного каталога или
+                           рабочего каталога.
+                        """,
+            epilog='''(c) Savi, 2015. Автор программы, как всегда,
+                      не несет никакой ответственности.
+                   '''
+            )
+    parser.add_argument("e_mail", type=str,
+                        help="Адреса получателя")
+    parser.add_argument("IP", type=str,
+                        help="IP Сервера SMTP")
+    parser.add_argument("PORT", type=int,
+                        help="Порт Сервера SMTP")
+    parser.add_argument("PATH", type=str, default=getcwd(), nargs='?',
+                        help="Путь к картинкам, по умолчанию - рабочий каталог")
+    parser.add_argument("--Login", "-L", type=str, default=None,
+                        help="Логин для авторизации в почте")
+    parser.add_argument("--Pass", "-P", type=str, default=None,
+                        help="Пароль для авторизации в почте")
+    return parser
 
 
 class SMTP:
@@ -136,8 +163,8 @@ class SMTP:
     def body_letter(self, socket):
         rcpt_to_template = "rcpt to: <{0}>\r\n"
         PIPELINING_command = "mail from: <{0}>".format(self.login) + '\r\n'
-        for adr in self.rcpt_to.split(' '):
-            PIPELINING_command += rcpt_to_template.format(adr)
+        # for adr in self.rcpt_to.split(' '):
+        PIPELINING_command += rcpt_to_template.format(self.rcpt_to)
         PIPELINING_command += "data\r\n"
         socket.send(PIPELINING_command.encode())
         ans = self.reader(socket)
@@ -156,8 +183,8 @@ class SMTP:
         start_template = "From: Good Guy <{0}>\r\n"
         to_template = ""
         for_who = "To: Bad Guy <{0}>\r\n"
-        for adr in self.rcpt_to.split(' '):
-            to_template += for_who.format(adr)
+        # for adr in self.rcpt_to.split(' '):
+        to_template += for_who.format(self.rcpt_to)
         message_template = ("Subject: Get It !\r\n"
                             "Content-Type: multipart/mixed; boundary=xyz\r\n"
                             "\r\n"
@@ -182,14 +209,14 @@ class SMTP:
             counter += 1
             if counter == len(dict_images):
                 files_template += image_b64_template.format(f[f.index(".")+1:], f) +\
-                                  "\r\n" + str(dict_images[f]) + '\r\n' + '--xyz--\r\n'
+                                  "\r\n" + str(dict_images[f].decode("UTF-8")) + '\r\n' + '--xyz--\r\n'
             else:
                 files_template += image_b64_template.format(f[f.index(".")+1:], f) +\
-                                  "\r\n" + str(dict_images[f]) + '\r\n' + '--xyz\r\n'
+                                  "\r\n" + str(dict_images[f].decode("UTF-8")) + '\r\n' + '--xyz\r\n'
         final_template = start_template.format(self.login) + to_template +\
                          message_template + attachments + files_template
-        with open("text.txt", "w") as t:
-            t.write(final_template)
+        # with open("check.txt", "w") as t:
+        #     t.write(final_template)
         return final_template
 
     def ehlo(self, s):
@@ -220,13 +247,15 @@ class SMTP:
 
 
 def main():
-    rcpt_to = "Ultimate95@mail.ru"
-    # path = "C:/Users/Игорь/Desktop/Institute/Интернет (Практика)/Tasks/SMTP_mime/Pictures"
-    path = "/home/savi/Рабочий стол/Интернет/Tasks/SMTP_mime/Pictures"
-    # s = SMTP("127.0.0.1", 25, rcpt_to, path)
-    s = SMTP("smtp.mail.ru", 587, rcpt_to, path, "Rick_Grimes72@mail.ru", "123test")
-    # s = SMTP("smtp.mail.ru", 465, rcpt_to, path, "Rick_Grimes72@mail.ru", "123test")
-    s.send_mail()
+    try:
+        p = createParser()
+        args = p.parse_args()
+        s = SMTP(args.IP, args.PORT, args.e_mail, args.PATH.replace('\\', '/'), args.Login, args.Pass)
+        s.send_mail()
+    except Exception as er:
+        print("\nSad\n")
+        print(er)
+        sys.exit()
 
 if __name__ == "__main__":
     main()
