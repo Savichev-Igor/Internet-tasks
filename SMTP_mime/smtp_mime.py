@@ -54,7 +54,7 @@ class SMTP:
     def connect_ssl(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv23)
-        self.ssl_socket.settimeout(1)
+        self.ssl_socket.settimeout(1.5)
         try:
             self.ssl_socket.connect((self.server, self.port))
             ans = self.reader(self.ssl_socket)
@@ -71,7 +71,7 @@ class SMTP:
 
     def connect_tls(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(1)
+        s.settimeout(1.5)
         try:
             s.connect((self.server, self.port))
             ans = self.reader(s)
@@ -111,7 +111,7 @@ class SMTP:
 
     def simple_connection(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.settimeout(1)
+        self.s.settimeout(1.5)
         try:
             self.s.connect((self.server, self.port))
             ans = self.reader(self.s)
