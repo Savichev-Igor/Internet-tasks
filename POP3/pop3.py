@@ -97,6 +97,7 @@ class POP3_SSL():
                 # sys.stderr.write(ans)
                 # print(current_mail)
                 # f.write(str(current_mail).encode())
+                # f.write(b'\n')
                 # f.write(ans)
                 # f.write(b'\n')
                 # print(current_mail)
@@ -105,16 +106,16 @@ class POP3_SSL():
                 from_who = self.parse_from(ans)
                 dec_from_who = self.decode_header(from_who)
                 general_info = self.parse_general(ans)
-                to = general_info[1]
+                to = general_info['To']
                 dec_to = self.decode_header(to)
                 mails.append({'№: ': current_mail,
                               'Subject: ': dec_subj,
                               'From: ': dec_from_who,
-                              'Size: ': general_info[0] + ' bytes',
+                              'Size: ': general_info['Size'] + ' bytes',
                               'To: ': dec_to,
-                              'Date: ': general_info[2]})
+                              'Date: ': general_info['Date']})
             except Exception as er:
-                print(er)
+                # print(er)
                 print("\nSomething is wrong with {0} mail\n".format(current_mail))
                 continue
         # f.close()
@@ -124,22 +125,22 @@ class POP3_SSL():
         to_flag = True
         date_flag = True
         size_flag = True
-        ans = list()
+        ans = {'Size': 'unknown', 'To': '', 'Date': ''}
         for line in str(data).split('\\r\\n'):
             if size_flag:
                 size = self.size_regexp.findall(line)
                 if len(size) > 0:
-                    ans.append(size[0])
+                    ans['Size'] = size[0]
                     size_flag = False
             if to_flag:
                 to = self.to_regexp.findall(line)
                 if len(to) > 0:
-                    ans.append(to[0])
+                    ans['To'] = to[0]
                     to_flag = False
             if date_flag:
                 date = self.date_regexp.findall(line)
                 if len(date) > 0:
-                    ans.append(date[0])
+                    ans['Date'] = date[0]
                     date_flag = False
             if not to_flag and not date_flag and not size_flag:
                 break
@@ -150,7 +151,7 @@ class POP3_SSL():
         subj = ""
         for line in str(data).split('\\r\\n'):
             if flag:
-                if 'From' in line or 'To' in line:
+                if 'From' in line or 'To' in line or 'Date' in line or 'Content-Type' in line:
                     break
                 else:
                     if '=?' in line:
@@ -161,14 +162,14 @@ class POP3_SSL():
                     flag = True
                     subj += sub[0]
         # print(subj)
-        return subj
+        return subj.replace('\\t', '')
 
     def parse_from(self, data):
         flag = False
         from_who = ""
         for line in str(data).split('\\r\\n'):
             if flag:
-                if 'To' in line or 'Subject' in line:
+                if 'To' in line or 'Subject' in line or 'Date' in line or 'Content-Type' in line:
                     break
                 else:
                     from_who += line
