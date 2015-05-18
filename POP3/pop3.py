@@ -4,8 +4,33 @@ import sys
 import socket
 import ssl
 import re
+import argparse
+# import click
 
 from email.header import decode_header
+
+
+def createParser():
+    parser = argparse.ArgumentParser(
+            prog='python3 pop3.py',
+            description="""Эта программа выводит неплохую информацию о вашей почте,
+                           по протоколу pop3
+                        """,
+            epilog='''(c) Savi, 2015. Автор программы, как всегда,
+                       не несет никакой ответственности.
+                   '''
+            )
+    parser.add_argument('pop_server', type=str,
+                        help="Адрес POP сервера")
+    parser.add_argument("--port", "-p", type=int, default=995,
+                        help="Порт POP сервера")
+    parser.add_argument("login", type=str,
+                        help="Ваш логин для почты")
+    parser.add_argument("password", type=str,
+                        help="Ваш пароль для почты")
+    parser.add_argument("--rang", "-r", type=str, default="1-1",
+                        help="Диапазон извелчения писем, в формате \d-\d. (По умолчанию = 1-1)")
+    return parser
 
 
 class POP3_SSL():
@@ -19,12 +44,15 @@ class POP3_SSL():
         self.amount_of_mails = None
         self.start = start
         self.end = end
-        self.mails = None
+        # self.mails = None
         self.to_regexp = re.compile("To:\s(.+)", re.IGNORECASE)
         self.from_regexp = re.compile("From:\s(.+)", re.IGNORECASE)
         self.subject_regexp = re.compile("Subject:\s(.+)", re.IGNORECASE)
         self.date_regexp = re.compile("Date:\s(.+)", re.IGNORECASE)
         self.size_regexp = re.compile("\+OK\s(\d+)\s")
+        self.boundary_regexp = re.compile("boundary=(.*?)[\n;]")
+        self.file_name = re.compile('filename="(.+)"')
+        self.base_data = re.compile('\n([A-z0-9+/\n=\s]+)\n')
 
     def connection(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -33,6 +61,7 @@ class POP3_SSL():
         try:
             self.ssl_socket.connect((self.server, self.port))
             ans = self.reader(self.ssl_socket)
+            sys.stderr.write('\n')
             sys.stderr.write(ans)
             if ans[1:3] == 'OK':
                 print("\nConnection is success\n")
@@ -42,6 +71,12 @@ class POP3_SSL():
             print(er)
             print("\nWe can't connection to POP3 server\n")
             sys.exit()
+
+    def end_connection(self):
+        # self.ssl_socket.send(b'QUIT\r\n')
+        # ans = self.reader(self.ssl_socket)
+        # sys.stderr.write(ans)
+        self.ssl_socket.close()
 
     def auth(self):
         login = 'USER' + ' ' + self.login + '\r\n'
@@ -85,13 +120,18 @@ class POP3_SSL():
             sys.exit()
 
     def get_mails(self):
-        mails = list()
+        # mails = list()
         retr_template = "RETR {0}\r\n"
         if self.amount_of_mails < self.end:
             self.end = self.amount_of_mails
         # f = open('check.txt', 'wb')
+        print('\n')
+        # with click.progressbar(range(self.start, self.end + 1, 1)) as bar:
+            # for current_mail in bar:
+                # do_something_with(item)
         for current_mail in range(self.start, self.end + 1, 1):
             try:
+                print('Getting mail № {0}...'.format(current_mail))
                 self.ssl_socket.send(retr_template.format(current_mail).encode())
                 ans = self.byte_reader(self.ssl_socket)
                 # sys.stderr.write(ans)
@@ -100,7 +140,6 @@ class POP3_SSL():
                 # f.write(b'\n')
                 # f.write(ans)
                 # f.write(b'\n')
-                # print(current_mail)
                 subj = self.parse_subj(ans)
                 dec_subj = self.decode_header(subj)
                 from_who = self.parse_from(ans)
@@ -108,18 +147,22 @@ class POP3_SSL():
                 general_info = self.parse_general(ans)
                 to = general_info['To']
                 dec_to = self.decode_header(to)
-                mails.append({'№: ': current_mail,
-                              'Subject: ': dec_subj,
-                              'From: ': dec_from_who,
-                              'Size: ': general_info['Size'] + ' bytes',
-                              'To: ': dec_to,
-                              'Date: ': general_info['Date']})
+                atts = self.get_size_att(ans)
+                mail = {'№: ': current_mail,
+                        'Subject: ': dec_subj,
+                        'From: ': dec_from_who,
+                        'Size: ': general_info['Size'] + ' bytes',
+                        'To: ': dec_to,
+                        'Date: ': general_info['Date'],
+                        'Attachments: ': atts}
+                self.cute_print(mail)
             except Exception as er:
                 # print(er)
                 print("\nSomething is wrong with {0} mail\n".format(current_mail))
                 continue
-        # f.close()
-        self.mails = mails
+            # f.close()
+            # self.mails = mails
+        self.end_connection()
 
     def parse_general(self, data):
         to_flag = True
@@ -181,6 +224,25 @@ class POP3_SSL():
         # print(from_who)
         return from_who.replace('\\t', '')
 
+    def get_size_att(self, data):
+        atts_sizes = dict()
+        b = self.boundary_regexp.findall(data.decode())
+        if len(b) >= 1:
+            b = b[-1]
+            b = b.replace('"', '')
+            b = b.replace("'", '')
+            for line in data.decode().split(b):
+                name = re.search('filename="(.*)"', line)
+                if name:
+                    f_name = str(name.groups()[0])
+                    s = re.findall('\n([A-z0-9+/\n=\s]+)\n', line)
+                    if s:
+                        s = s[0]
+                        atts_sizes[f_name] = str((len(s)*6)//8) + ' bytes'
+                    else:
+                        atts_sizes[f_name] = 'unknows bytes'
+        return atts_sizes
+
     def decode_header(self, data):
         dec = decode_header(data)
         f_dec = ""
@@ -218,26 +280,36 @@ class POP3_SSL():
                 break
         return ans
 
-    def cute_print(self):
-        for mail in self.mails:
-            print('\n\n')
-            for key in mail:
-                try:
-                    print(key, end='')
-                    print(mail[key])
-                except Exception as er:
-                    print("Something is wrong with encodings...")
-                    # print(er)
+    def cute_print(self, mail):
+        # for mail in self.mails:
+        print('\n')
+        for key in mail:
+            try:
+                print(key, end='')
+                print(mail[key])
+            except Exception as er:
+                print("Something is wrong with encoding")
+                # print(er)
+        print('\n')
 
 
 def main():
-    p = None
+    A = createParser()
+    args = A.parse_args()
+    if args.rang:
+        rang = args.rang.split('-')
+        start = int(rang[0])
+        end = int(rang[1])
+    else:
+        start = 1
+        end = 1
+    p = POP3_SSL(args.pop_server, args.port, args.login, args.password, start, end)
     p.connection()
     p.auth()
-    # p.list()
+    # p.list()  
     p.stat()
     p.get_mails()
-    p.cute_print()
+    # p.cute_print()
 
 if __name__ == "__main__":
     main()
