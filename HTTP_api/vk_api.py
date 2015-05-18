@@ -1,7 +1,5 @@
-# !/usr/bin/python2.6
+# !/usr/bin/python2
 # -*- coding: utf-8 -*-
-from __future__ import print_function   # python3 print only from python2.6
-
 import sys
 import os
 import urllib
@@ -103,11 +101,11 @@ def main():
         p = createParser()
         a = p.parse_args()
         if a.run == 'run':
-            print('\nYour login: ', end='')
+            sys.stdout.write('\nYour login: ')
             login = raw_input()
-            print('\nYour pass: ', end='')
+            sys.stdout.write('\nYour pass: ')
             password = getpass.getpass()
-            print("\nAlbum's name: ", end='')
+            sys.stdout.write("\nAlbum's name: ")
             album_name = raw_input()
             v = VK_photo(login, password, album_name)
             v.auth()
