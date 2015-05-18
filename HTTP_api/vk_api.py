@@ -7,10 +7,27 @@ import os
 import urllib
 import click    # for good loking :>
 import getpass  # Security :3
+import argparse
 import vkontakte    # API python2 only
 
 
 from moduls.vk_appl_auth import VKAppAuth   # python2 only
+
+
+def createParser():
+    parser = argparse.ArgumentParser(
+            prog='python2.6 vk_api.py',
+            description="""Hi, this script takes all photos from chosed album
+                           VK in best quality. Run program one more time with only one parametr - run
+                           for start.
+                        """,
+            epilog="""(c) Savi, 2015. The author assumes no responsibility,
+                      like always.
+                   """
+            )
+    parser.add_argument('run', type=str,
+                        help="Just for run")
+    return parser
 
 
 class VK_photo:
@@ -83,13 +100,9 @@ class VK_photo:
 
 def main():
     try:
-        if len(sys.argv) == 1 or sys.argv[1] == '-h':
-            print("""\nHi, this script takes all photos from chosed album
-                     \rVK in best quality. Run program one more time with only one parametr - run
-                     \rfor start.\n
-                     \r(c) Savi, 2015. The author assumes no responsibility, like always.
-                  """)
-        elif len(sys.argv) == 2 and sys.argv[1] == 'run':
+        p = createParser()
+        a = p.parse_args()
+        if a.run == 'run':
             print('\nYour login: ', end='')
             login = raw_input()
             print('\nYour pass: ', end='')
@@ -100,6 +113,8 @@ def main():
             v.auth()
             v.get_albums()
             v.get_photos()
+        elif len(sys.argv) >= 1:
+            p.print_help()
     except Exception as er:
         print(er)
         print('\n:<\n')
