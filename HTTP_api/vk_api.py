@@ -79,15 +79,12 @@ class VK_photo:
                     if photo.has_key('src_xxxbig'):
                         b = self.get_bytes(photo['src_xxxbig'])
                         f.write(b)
-                        continue
                     elif photo.has_key('src_xxbig'):
                         b = self.get_bytes(photo['src_xxbig'])
                         f.write(b)
-                        continue
                     elif photo.has_key('src_xbig'):
                         b = self.get_bytes(photo['src_xbig'])
                         f.write(b)
-                        continue
                     elif photo.has_key('src_big'):
                         b = self.get_bytes(photo['src_big'])
                         f.write(b)
