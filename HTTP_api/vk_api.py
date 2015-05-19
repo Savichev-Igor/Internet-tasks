@@ -14,7 +14,7 @@ from moduls.vk_appl_auth import VKAppAuth   # python2 only
 
 def createParser():
     parser = argparse.ArgumentParser(
-            prog='python2.6 vk_api.py',
+            prog='python2 vk_api.py',
             description="""Hi, this script takes all photos from chosed album
                            VK in best quality. Run program one more time with only one parametr - run
                            for start.
