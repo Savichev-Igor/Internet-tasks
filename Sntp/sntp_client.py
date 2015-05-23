@@ -8,7 +8,7 @@ import struct
 import argparse
 
 HOST = "127.0.0.1"
-PORT = 123
+PORT = 8000
 
 FORMAT = "BBBBII4sQQQQ"
 

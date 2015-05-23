@@ -13,7 +13,7 @@ FORMAT = "BBBBII4sQQQQ"
 TIME1970 = 2208988800  # Thanks to F.Lundh
 
 HOST = "0.0.0.0"
-PORT = 123
+PORT = 8000
 
 
 def createParser():
