@@ -34,6 +34,11 @@ def take_packet():
 
 class Traceroute:
 
+    regexp_iana = re.compile('whois:(.+)')
+    regexp_reg_AS = re.compile('origin:.+as(\d+)')
+    regexp_reg_country = re.compile('country:(.+)')
+    regexp_reg_provider = re.compile('descr:(.+)')
+
     def __init__(self, dest_name, max_hops):
         self.dest_addr = socket.gethostbyname(dest_name)
         # self.dest_name = dest_name
@@ -43,14 +48,11 @@ class Traceroute:
         self.s = socket.socket(socket.AF_INET, socket.SOCK_RAW,
                                socket.IPPROTO_ICMP)
         self.s.settimeout(3.0)
-        self.regexp_iana = re.compile('whois:(.+)')
-        self.regexp_reg_AS = re.compile('origin:.+as(\d+)')
-        self.regexp_reg_country = re.compile('country:(.+)')
-        self.regexp_reg_provider = re.compile('descr:(.+)')
 
     def start(self):
         ttl = 1
         while True:
+            res = ""
             self.s.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
             self.s.sendto(self.bin_packet, (self.dest_addr, self.port))
             curr_addr = None
@@ -71,45 +73,31 @@ class Traceroute:
                 curr_host = "%s (%s)" % (curr_name, curr_addr)
             else:
                 curr_host = "* * *"
-            print("%d\t%s" % (ttl, curr_host))
-            print('\n')
+            res += "%d\t%s\n" % (ttl, curr_host)
             if curr_host != "* * *" and server is not None:
                 for key in info:
-                    print("\t%s: %s" % (key, info[key]))
-                print('\n')
+                    res += "\t%s: %s\n" % (key, info[key])
             else:
                 for i in range(3):
-                    print("\t%s" % ("***"))
-                print('\n')
+                    res += "\t%s\n" % ("***")
             ttl += 1
+            yield res
             if curr_addr == self.dest_addr:
-                print('\nNice, we got addres with %s hops' % (self.max_hops))
                 break
             if ttl > self.max_hops:
-                print('Hops ended... :<')
                 break
         self.s.close()
 
     def whois_iana(self, ip_addr):
         ip_addr += '\r\n'
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("whois.iana.org", 43))
-        # s.setblocking(0)    # Если не может прочитать - кидает эксепшн
-        buf = ""
-        s.send(ip_addr.encode())
         try:
-            while True:
-                temp = s.recv(1024)
-                if len(temp) > 0:
-                    buf += temp.decode('utf-8')
-                else:
-                    break
-        except socket.error:
-            pass
-        finally:
-            s.close()
-        # print(buf)
-        res = re.search(self.regexp_iana, buf)
+            s.connect(("whois.iana.org", 43))
+        except:
+            return None
+        # s.setblocking(0)    # Если не может прочитать - кидает эксепшн
+        buf = self.reader(s, ip_addr)
+        res = Traceroute.regexp_iana.search(buf)
         try:
             need_server = res.groups()[0].strip()
         except:
@@ -124,8 +112,30 @@ class Traceroute:
         #     print(s.recv(1024))    # Приветствие пропустили
         # except:
         #     pass
-        s.send(ip_addr.encode())
+        buf = self.reader(s, ip_addr)
+        dict_info = {}
+        buf = buf.lower()
+        AS = Traceroute.regexp_reg_AS.search(buf)
+        country = Traceroute.regexp_reg_country.search(buf)
+        provider = Traceroute.regexp_reg_provider.search(buf)
+        dict_info["server"] = server
+        try:
+            dict_info["AS"] = AS.groups()[0].strip().upper()
+        except:
+            dict_info["AS"] = "***"
+        try:
+            dict_info["country"] = country.groups()[0].strip().upper()
+        except:
+            dict_info["country"] = "***"
+        try:
+            dict_info["provider"] = provider.groups()[0].strip().upper()
+        except:
+            dict_info['provider'] = "***"
+        return dict_info
+
+    def reader(self, s, ip_addr):
         buf = ""
+        s.send(ip_addr.encode())
         try:
             while True:
                 temp = s.recv(1024)
@@ -134,31 +144,10 @@ class Traceroute:
                 else:
                     break
         except socket.error:
-                pass
+            pass
         finally:
             s.close()
-        dict_info = {}
-        # print(buf)
-        buf = buf.lower()
-        AS = re.search(self.regexp_reg_AS, buf)
-        country = re.search(self.regexp_reg_country, buf)
-        provider = re.search(self.regexp_reg_provider, buf)
-        dict_info.update({"server": server})
-        try:
-            dict_info.update({"AS": AS.groups()[0].strip().upper()})
-        except:
-            dict_info.update({"AS": "***"})
-        try:
-            dict_info.update({"country": country.groups()[0].strip().upper()})
-        except:
-            dict_info.update({'country': "***"})
-        try:
-            dict_info.update({"provider":
-                              provider.groups()[0].strip().upper()})
-        except:
-            dict_info.update({'provider': "***"})
-        return dict_info
-
+        return buf
 
 if __name__ == "__main__":
     try:
@@ -170,7 +159,9 @@ if __name__ == "__main__":
         print("\nTraceroute for %s with %s hops...\n" % (args.destination,
                                                          args.Hops))
         A = Traceroute(args.destination, args.Hops)
-        A.start()
+        gen = A.start()
+        for info in gen:
+            print(info)
     finally:
         if sys.platform == "win32":
             os.system("netsh advfirewall firewall delete rule name=ICMPV4 \
