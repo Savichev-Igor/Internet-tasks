@@ -33,12 +33,13 @@ class Client():
 
     def __init__(self):
         self.packet = struct.Struct(FORMAT)
-        self.s = socket.create_connection((HOST, PORT), 3.0)
+        UDP = socket.getprotobyname('UDP')
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, UDP)
 
     def send_request(self):
         packet_bin = self.packet.pack(0b00100011, 0, 0, 0, 0, 0, b'Hi',
                                       0, 0, 0, self.get_time())
-        self.s.sendall(packet_bin)
+        self.s.sendto(packet_bin, (HOST, PORT))
 
     def get_reply(self):
         answer_packet_bin = self.s.recv(1024)
@@ -75,9 +76,13 @@ def main():
     p = createParser()
     p.parse_args()
     A = Client()
-    A.send_request()
-    time = A.get_reply()
-    print(time)
+    try:
+        A.send_request()
+        time = A.get_reply()
+        print(time)
+    except Exception as e:
+        # print(e)
+        print("\nSomething is wrong")
 
 if __name__ == "__main__":
     main()

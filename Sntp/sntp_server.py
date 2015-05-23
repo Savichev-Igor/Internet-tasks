@@ -1,10 +1,9 @@
 # !/usr/bin/python
 # -*- coding: utf-8 -*-
 import sys
-# import signal
 import socket
 import time
-import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import struct
 import argparse
@@ -31,21 +30,18 @@ def createParser():
     return parser
 
 
-class Server(threading.Thread):
+class Server:
 
-    def __init__(self, ip_addr, port, client, offset):
-        threading.Thread.__init__(self)
+    def __init__(self, s, addr, query_packet, offset):
         self.daemon = True
-        self.ip_addr = ip_addr
-        self.port = port
-        self.client = client
+        self.s = s
+        self.addr = addr
+        self.query_packet = query_packet
         self.offset = offset
 
-    def run(self):
-        # self.client.settimeout(3)
-        self.client.sendall(self.create_answer())
-        self.client.shutdown(socket.SHUT_WR)   # Дочитает - закроет
-        self.client.close()
+    def answer(self):
+        self.s.sendto(self.create_answer(), self.addr)
+        return "OK"
 
     def create_answer(self):
         """ В этой функции мы фиксируем время приёма пакета,
@@ -53,11 +49,10 @@ class Server(threading.Thread):
             также фиксируем время отправки ответа.
         """
         # time.sleep(1.5)  # Чтобы имитировать, что сервер думает
-        packet_bin = self.client.recv(1024)
         recv_time = self.get_time()
         # time.sleep(1.0)  # Аналогично
         try:
-            data = struct.unpack(FORMAT, packet_bin)
+            data = struct.unpack(FORMAT, self.query_packet)
             answer_packet = struct.Struct(FORMAT)
             answer_packet_bin = answer_packet.pack(0b00100100, 1,
                                                    0, 0, 0, 0, b'Savi',
@@ -73,25 +68,18 @@ class Server(threading.Thread):
         return t
 
 
-# def handler(signum, frame):
-    # s.close()
-    # print('\nWe closed socket')
-
-
 def main():
     try:
-        # signal.signal(signal.SIGTSTP, handler)
-        # signal.signal(signal.SIGINT, handler)
-        # global s
         p = createParser()
         args = p.parse_args()
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        UDP = socket.getprotobyname('UDP')
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, UDP)
         s.bind((HOST, PORT))
-        s.listen(10)
-        while True:
-            client, (ip_addr, port) = s.accept()
-            print(ip_addr, port)
-            Server(ip_addr, port, client, args.Offset).start()
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            while True:
+                query_packet, addr = s.recvfrom(1024)
+                query = Server(s, addr, query_packet, args.Offset)
+                pool.submit(query.answer)
     except KeyboardInterrupt as error:
         s.close()
         print('\nYou killed program :<')
