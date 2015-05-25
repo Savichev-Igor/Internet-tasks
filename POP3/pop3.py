@@ -35,6 +35,15 @@ def createParser():
 
 class POP3_SSL():
 
+    to_regexp = re.compile("To:\s(.+)", re.IGNORECASE)
+    from_regexp = re.compile("From:\s(.+)", re.IGNORECASE)
+    subject_regexp = re.compile("Subject:\s(.+)", re.IGNORECASE)
+    date_regexp = re.compile("Date:\s(.+)", re.IGNORECASE)
+    size_regexp = re.compile("\+OK\s(\d+)\s")
+    boundary_regexp = re.compile("boundary=(.*?)[\n;]")
+    file_name = re.compile('filename="(.*)"')
+    base_data = re.compile('\n([A-z0-9+/\n=\s]+)\n')
+
     def __init__(self, server, port, login, password, start, end):
         self.server = server
         self.port = port
@@ -45,14 +54,6 @@ class POP3_SSL():
         self.start = start
         self.end = end
         # self.mails = None
-        self.to_regexp = re.compile("To:\s(.+)", re.IGNORECASE)
-        self.from_regexp = re.compile("From:\s(.+)", re.IGNORECASE)
-        self.subject_regexp = re.compile("Subject:\s(.+)", re.IGNORECASE)
-        self.date_regexp = re.compile("Date:\s(.+)", re.IGNORECASE)
-        self.size_regexp = re.compile("\+OK\s(\d+)\s")
-        self.boundary_regexp = re.compile("boundary=(.*?)[\n;]")
-        self.file_name = re.compile('filename="(.+)"')
-        self.base_data = re.compile('\n([A-z0-9+/\n=\s]+)\n')
 
     def connection(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -68,7 +69,7 @@ class POP3_SSL():
             else:
                 raise ValueError
         except Exception as er:
-            print(er)
+            # print(er)
             print("\nWe can't connection to POP3 server\n")
             sys.exit()
 
@@ -93,7 +94,7 @@ class POP3_SSL():
             if ans[1:3] != "OK":
                 raise ValueError
         except Exception as er:
-            print(er)
+            # print(er)
             print('\nSomething wrong with your pass or login\n')
             sys.exit()
 
@@ -103,7 +104,7 @@ class POP3_SSL():
             ans = self.reader(self.ssl_socket)
             sys.stderr.write(ans)
         except Exception as er:
-            print(er)
+            # print(er)
             print('\nSomething is going wrong...\n')
             sys.exit()
 
@@ -115,7 +116,7 @@ class POP3_SSL():
             sys.stderr.write(ans)
             self.amount_of_mails = int(regexp.findall(ans)[0])
         except Exception as er:
-            print(er)
+            # print(er)
             print('\nSomething is going wrong...\n')
             sys.exit()
 
@@ -171,17 +172,17 @@ class POP3_SSL():
         ans = {'Size': 'unknown', 'To': '', 'Date': ''}
         for line in str(data).split('\\r\\n'):
             if size_flag:
-                size = self.size_regexp.findall(line)
+                size = POP3_SSL.size_regexp.findall(line)
                 if len(size) > 0:
                     ans['Size'] = size[0]
                     size_flag = False
             if to_flag:
-                to = self.to_regexp.findall(line)
+                to = POP3_SSL.to_regexp.findall(line)
                 if len(to) > 0:
                     ans['To'] = to[0]
                     to_flag = False
             if date_flag:
-                date = self.date_regexp.findall(line)
+                date = POP3_SSL.date_regexp.findall(line)
                 if len(date) > 0:
                     ans['Date'] = date[0]
                     date_flag = False
@@ -200,11 +201,10 @@ class POP3_SSL():
                     if '=?' in line:
                         subj += line
             else:
-                sub = self.subject_regexp.findall(line)
+                sub = POP3_SSL.subject_regexp.findall(line)
                 if len(sub) > 0:
                     flag = True
                     subj += sub[0]
-        # print(subj)
         return subj.replace('\\t', '')
 
     def parse_from(self, data):
@@ -217,25 +217,24 @@ class POP3_SSL():
                 else:
                     from_who += line
             else:
-                sub = self.from_regexp.findall(line)
+                sub = POP3_SSL.from_regexp.findall(line)
                 if len(sub) > 0:
                     flag = True
                     from_who += sub[0]
-        # print(from_who)
         return from_who.replace('\\t', '')
 
     def get_size_att(self, data):
         atts_sizes = dict()
-        b = self.boundary_regexp.findall(data.decode())
+        b = POP3_SSL.boundary_regexp.findall(data.decode())
         if len(b) >= 1:
             b = b[-1]
             b = b.replace('"', '')
             b = b.replace("'", '')
             for line in data.decode().split(b):
-                name = re.search('filename="(.*)"', line)
+                name = POP3_SSL.file_name.search(line)
                 if name:
                     f_name = str(name.groups()[0])
-                    s = re.findall('\n([A-z0-9+/\n=\s]+)\n', line)
+                    s = POP3_SSL.base_data.findall(line)
                     if s:
                         s = s[0]
                         atts_sizes[f_name] = str((len(s)*6)//8) + ' bytes'
@@ -288,8 +287,8 @@ class POP3_SSL():
                 print(key, end='')
                 print(mail[key])
             except Exception as er:
-                print("Something is wrong with encoding")
                 # print(er)
+                print("Something is wrong with encoding")
         print('\n')
 
 
