@@ -32,29 +32,27 @@ def createParser():
                         help="Логин для авторизации в почте")
     parser.add_argument("--Pass", "-P", type=str, default=None,
                         help="Пароль для авторизации в почте")
+    parser.add_argument("--Defense", "-D", type=str, default="SSL", nargs='?',
+                        help="Тип соединения")
     return parser
 
 
 class SMTP:
 
-    def __init__(self, server, port, rcpt_to, path, login=None, password=None):
+    def __init__(self, server, port, rcpt_to, path, type_security, login=None, password=None):
         self.server = server
         self.port = port
         self.login = login
         self.password = password
         self.rcpt_to = rcpt_to
         self.path = path
-        self.type_security = None
+        self.type_security = type_security
         # self.PIPELING = False    Ну он используется, в общем
-        if port == 587:
-            self.type_security = 'TLS'
-        elif port == 965 or port == 465:
-            self.type_security = 'SSL'
 
     def connect_ssl(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_socket = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv23)
-        self.ssl_socket.settimeout(1.5)
+        self.ssl_socket.settimeout(3.0)
         try:
             self.ssl_socket.connect((self.server, self.port))
             ans = self.reader(self.ssl_socket)
@@ -66,7 +64,7 @@ class SMTP:
             self.ehlo(self.ssl_socket)
         except Exception as er:
             print("\nWe can't connection to SMTP_SSL server\n")
-            print(er)
+            # print(er)
             sys.exit()
 
     def connect_tls(self):
@@ -92,7 +90,7 @@ class SMTP:
                 raise ValueError
         except Exception as er:
             print("\nWe can't connection to SMTP_TLS server\n")
-            print(er)
+            # print(er)
             sys.exit()
 
     def get_only_images_base64(self):
@@ -105,8 +103,12 @@ class SMTP:
         for f in files:
             if len(re_images.findall(f)) > 0:
                 with open(self.path+"/"+f, "rb") as normal_file:
-                    encoded_string = base64.standard_b64encode(normal_file.read())
-                    dict_images[f] = encoded_string
+                    try:
+                        encoded_string = base64.standard_b64encode(normal_file.read())
+                        dict_images[f] = encoded_string
+                    except Exception as er:
+                        print('\nSomething is wrong with file ' + str(f) + '\n')
+                        continue
         return dict_images
 
     def simple_connection(self):
@@ -122,8 +124,8 @@ class SMTP:
                 raise ValueError
             self.ehlo(self.s)
         except Exception as er:
-            print("\nWe can't connection to SMTP_SSL server\n")
-            print(er)
+            print("\nWe can't connection to SMTP server\n")
+            # print(er)
             sys.exit()
 
     def send_mail(self):
@@ -132,19 +134,19 @@ class SMTP:
                 self.connect_tls()
                 sock = self.tls_socket
                 self.auth(self.tls_socket)
-                self.body_letter(self.tls_socket)
+                self.body_letter_pipelining(self.tls_socket)
             elif self.type_security == "SSL":
                 self.connect_ssl()
                 sock = self.ssl_socket
                 self.auth(self.ssl_socket)
-                self.body_letter(self.ssl_socket)
-            elif not self.login and not self.password:
+                self.body_letter_pipelining(self.ssl_socket)
+            elif not self.login and not self.password and self.type_security == None:
                 self.simple_connection()
                 sock = self.s
                 self.body_letter(sock)
         except Exception as er:
             print("\nSomething is going wrong...\n")
-            print(er)
+            # print(er)
             sys.exit()
 
     def auth(self, socket):
@@ -159,8 +161,13 @@ class SMTP:
         socket.send(b64_password + b'\r\n')
         ans = self.reader(socket)
         sys.stderr.write(ans)
+        if ans[0:3] == '235':
+            print("\nAuth is success\n")
+        else:
+            print("\nAuth is unsuccess\n")
+            sys.exit()
 
-    def body_letter(self, socket):
+    def body_letter_pipelining(self, socket):
         rcpt_to_template = "rcpt to: <{0}>\r\n"
         PIPELINING_command = "mail from: <{0}>".format(self.login) + '\r\n'
         # for adr in self.rcpt_to.split(' '):
@@ -172,6 +179,28 @@ class SMTP:
         data = self.get_data().encode()
         socket.send(data)
         socket.send(b".\r\n")
+        ans = self.reader(socket)
+        sys.stderr.write(ans)
+        if ans[0:3] == "250":
+            print("\nLetter was send\n")
+        socket.send(b"quit\r\n")
+        socket.close()
+
+    def body_letter(self, socket):
+        mail_from = "mail from: <{0}>\r\n".format('anonymous@hacker.net')
+        socket.send(mail_from.encode())
+        ans = self.reader(socket)
+        sys.stderr.write(ans)
+        rcpt_to = "rcpt to: <{0}>\r\n".format(self.rcpt_to)
+        socket.send(rcpt_to.encode())
+        ans = self.reader(socket)
+        sys.stderr.write(ans)
+        socket.send(b'data\r\n')
+        ans = self.reader(socket)
+        sys.stderr.write(ans)
+        data = self.get_data().encode()
+        socket.send(data)
+        socket.send(b'.\r\n')
         ans = self.reader(socket)
         sys.stderr.write(ans)
         if ans[0:3] == "250":
@@ -230,7 +259,7 @@ class SMTP:
                 raise ValueError
         except Exception as er:
             print("\nWe are unable to introduce yourself to the server\n")
-            print(er)
+            # print(er)
             sys.exit()
 
     def reader(self, s):
@@ -250,11 +279,11 @@ def main():
     try:
         p = createParser()
         args = p.parse_args()
-        s = SMTP(args.IP, args.PORT, args.e_mail, args.PATH.replace('\\', '/'), args.Login, args.Pass)
+        s = SMTP(args.IP, args.PORT, args.e_mail, args.PATH.replace('\\', '/'), args.Defense, args.Login, args.Pass)
         s.send_mail()
     except Exception as er:
         print("\nSad\n")
-        print(er)
+        # print(er)
         sys.exit()
 
 if __name__ == "__main__":
