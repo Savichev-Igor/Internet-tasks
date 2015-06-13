@@ -32,21 +32,24 @@ def createParser():
                         help="Логин для авторизации в почте")
     parser.add_argument("--Pass", "-P", type=str, default=None,
                         help="Пароль для авторизации в почте")
-    parser.add_argument("--Defense", "-D", type=str, default="SSL", nargs='?',
+    parser.add_argument("--Defense", "-D", type=str, default=None, nargs='?',
                         help="Тип соединения")
     return parser
 
 
 class SMTP:
 
-    def __init__(self, server, port, rcpt_to, path, type_security, login=None, password=None):
+    def __init__(self, server, port, rcpt_to, path, type_security=None, login=None, password=None):
         self.server = server
         self.port = port
         self.login = login
         self.password = password
         self.rcpt_to = rcpt_to
         self.path = path
-        self.type_security = type_security
+        if type_security:
+            self.type_security = type_security.upper()
+        else:
+            self.type_security = type_security
         # self.PIPELING = False    Ну он используется, в общем
 
     def connect_ssl(self):
@@ -140,10 +143,12 @@ class SMTP:
                 sock = self.ssl_socket
                 self.auth(self.ssl_socket)
                 self.body_letter_pipelining(self.ssl_socket)
-            elif not self.login and not self.password and self.type_security == None:
+            elif not self.login and not self.password:
                 self.simple_connection()
                 sock = self.s
                 self.body_letter(sock)
+            else:
+                print("\nI think that you don't give enough information\n")
         except Exception as er:
             print("\nSomething is going wrong...\n")
             # print(er)
