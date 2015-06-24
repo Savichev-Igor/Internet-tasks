@@ -129,7 +129,6 @@ class Portscan:
             self.s_UDP.sendto(b"LOL", (self.ip_addr, port))
             try:
                 f_data = self.s_UDP.recv(1024)
-                # print(f_data)
                 result = port, 'unknown'
                 for packet in Portscan.PACKETS:
                     try:
