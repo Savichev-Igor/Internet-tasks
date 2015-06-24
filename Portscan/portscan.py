@@ -129,7 +129,7 @@ class Portscan:
             self.s_UDP.sendto(b"LOL", (self.ip_addr, port))
             try:
                 f_data = self.s_UDP.recv(1024)
-                print(f_data)
+                # print(f_data)
                 result = port, 'unknown'
                 for packet in Portscan.PACKETS:
                     try:
@@ -216,7 +216,7 @@ def main():
     start = int(PORTS[0])
     end = int(PORTS[1])+1
     print()
-    p = Pool(50)
+    p = Pool(500)
     s = Portscan(args.HOST)
     result_TCP = list(filter(bool, p.map(s.check_TCP, range(start, end))))  # All ports and + 1
     result_UDP = list(filter(bool, p.map(s.check_UDP, range(start, end))))  # All ports and + 1
