@@ -77,6 +77,7 @@ class VK_photo:
         self.title = str(s_aid)
 
     def get_photos(self):
+        """Получаем фоточки"""
         query = 'https://api.vk.com/method/{0}?owner_id={1}&album_id={2}&access_token={3}'.format('photos.get',
                                                                                                   self.uid,
                                                                                                   self.aid, self.access_token)
@@ -108,18 +109,21 @@ class VK_photo:
         print('\nYou can check dir :)\n')
 
     def get_bytes(self, url):
+        """Байты фоточек"""
         resource = requests.get(url)
         return resource.content
 
 
 def create_obj():
-        login = raw_input('\nYour login: ')
-        password = getpass.getpass(prompt='\nYour password: ')
-        V = VK_photo(login, password)
-        return V
+    """Пытаемся создать наш API object"""
+    login = raw_input('\nYour login: ')
+    password = getpass.getpass(prompt='\nYour password: ')
+    V = VK_photo(login, password)
+    return V
 
 
 def main():
+    """Без комментариев"""
     try:
         p = createParser()
         a = p.parse_args()
