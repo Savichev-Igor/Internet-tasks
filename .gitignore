@@ -1,6 +1,2 @@
 .DS_Store
-SMTP_mime/trash.txt
-POP3/test.py
-POP3/check.txt
-HTTP_api/Main
 *.pyc
