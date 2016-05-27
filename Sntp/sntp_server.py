@@ -60,8 +60,8 @@ class Server:
                                                    recv_time,
                                                    self.get_time())
             return answer_packet_bin
-        except Exception as e:
-            pass    # Не реагируем на плохие пакеты
+        except Exception:
+            pass  # Не реагируем на плохие пакеты
 
     def get_time(self):
         t = int((time.time() + TIME1970 + self.offset) * 2**32)
@@ -80,7 +80,7 @@ def main():
                 query_packet, addr = s.recvfrom(1024)
                 query = Server(s, addr, query_packet, args.Offset)
                 pool.submit(query.answer)
-    except KeyboardInterrupt as error:
+    except KeyboardInterrupt:
         s.close()
         print('\nYou killed program :<')
         sys.exit(0)

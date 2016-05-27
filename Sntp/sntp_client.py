@@ -1,6 +1,5 @@
 # !/usr/bin/python
 # -*- coding: utf-8 -*-
-# import sys
 import socket
 import time
 
@@ -80,8 +79,7 @@ def main():
         A.send_request()
         time = A.get_reply()
         print(time)
-    except Exception as e:
-        # print(e)
+    except Exception:
         print("\nSomething is wrong")
 
 if __name__ == "__main__":

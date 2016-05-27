@@ -11,7 +11,7 @@ import argparse
 
 def createParser():
     parser = argparse.ArgumentParser(
-            prog='python smtp_mime.py',
+            prog="python smtp_mime.py",
             description="""Эта программа отправляет все картинки
                            в виде вложений из указанного каталога или
                            рабочего каталога.
@@ -26,13 +26,13 @@ def createParser():
                         help="IP Сервера SMTP")
     parser.add_argument("PORT", type=int,
                         help="Порт Сервера SMTP")
-    parser.add_argument("PATH", type=str, default=getcwd(), nargs='?',
+    parser.add_argument("PATH", type=str, default=getcwd(), nargs="?",
                         help="Путь к картинкам, по умолчанию - рабочий каталог")
     parser.add_argument("--Login", "-L", type=str, default=None,
                         help="Логин для авторизации в почте")
     parser.add_argument("--Pass", "-P", type=str, default=None,
                         help="Пароль для авторизации в почте")
-    parser.add_argument("--Defense", "-D", type=str, default=None, nargs='?',
+    parser.add_argument("--Defense", "-D", type=str, default=None, nargs="?",
                         help="Тип соединения")
     return parser
 
@@ -50,7 +50,7 @@ class SMTP:
             self.type_security = type_security.upper()
         else:
             self.type_security = type_security
-        # self.PIPELING = False    Ну он используется, в общем
+        # self.PIPELING = False  # Ну он используется, в общем
 
     def connect_ssl(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -60,14 +60,13 @@ class SMTP:
             self.ssl_socket.connect((self.server, self.port))
             ans = self.reader(self.ssl_socket)
             sys.stderr.write(ans)
-            if ans[0:3] == '220':
+            if ans[0:3] == "220":
                 print("\nConnection is success\n")
             else:
                 raise ValueError
             self.ehlo(self.ssl_socket)
-        except Exception as er:
+        except Exception:
             print("\nWe can't connection to SMTP_SSL server\n")
-            # print(er)
             sys.exit()
 
     def connect_tls(self):
@@ -77,27 +76,26 @@ class SMTP:
             s.connect((self.server, self.port))
             ans = self.reader(s)
             sys.stderr.write(ans)
-            if ans[0:3] == '220':
+            if ans[0:3] == "220":
                 print("\nConnection is success\n")
             else:
                 raise ValueError
             self.ehlo(s)
-            s.send(b'STARTTLS\r\n')
+            s.send(b"STARTTLS\r\n")
             ans = self.reader(s)
             sys.stderr.write(ans)
-            if ans[0:3] == '220':
-                print('\nOkay, we start TLS connection\n')
+            if ans[0:3] == "220":
+                print("\nOkay, we start TLS connection\n")
                 self.tls_socket = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_TLSv1)
                 self.ehlo(self.tls_socket)
             else:
                 raise ValueError
-        except Exception as er:
+        except Exception:
             print("\nWe can't connection to SMTP_TLS server\n")
-            # print(er)
             sys.exit()
 
     def get_only_images_base64(self):
-        re_images = re.compile('(jpeg|jpg|png|bmp|gif)')
+        re_images = re.compile("(jpeg|jpg|png|bmp|gif)")
         dict_images = dict()
         files = []
         for (dir_path, dir_names, file_names) in walk(self.path):
@@ -105,12 +103,12 @@ class SMTP:
             break
         for f in files:
             if len(re_images.findall(f)) > 0:
-                with open(self.path+"/"+f, "rb") as normal_file:
+                with open(self.path + "/" + f, "rb") as normal_file:
                     try:
                         encoded_string = base64.standard_b64encode(normal_file.read())
                         dict_images[f] = encoded_string
-                    except Exception as er:
-                        print('\nSomething is wrong with file ' + str(f) + '\n')
+                    except Exception:
+                        print("\nSomething is wrong with file " + str(f) + "\n")
                         continue
         return dict_images
 
@@ -121,14 +119,13 @@ class SMTP:
             self.s.connect((self.server, self.port))
             ans = self.reader(self.s)
             sys.stderr.write(ans)
-            if ans[0:3] == '220':
+            if ans[0:3] == "220":
                 print("\nConnection is success\n")
             else:
                 raise ValueError
             self.ehlo(self.s)
-        except Exception as er:
+        except Exception:
             print("\nWe can't connection to SMTP server\n")
-            # print(er)
             sys.exit()
 
     def send_mail(self):
@@ -149,24 +146,23 @@ class SMTP:
                 self.body_letter(sock)
             else:
                 print("\nI think that you don't give enough information\n")
-        except Exception as er:
+        except Exception:
             print("\nSomething is going wrong...\n")
-            # print(er)
             sys.exit()
 
     def auth(self, socket):
-        socket.send(b'AUTH LOGIN\r\n')
+        socket.send(b"AUTH LOGIN\r\n")
         ans = self.reader(socket)
         sys.stderr.write(ans)
         b64_login = base64.b64encode(self.login.encode())
-        socket.send(b64_login + b'\r\n')
+        socket.send(b64_login + b"\r\n")
         ans = self.reader(socket)
         sys.stderr.write(ans)
         b64_password = base64.b64encode(self.password.encode())
-        socket.send(b64_password + b'\r\n')
+        socket.send(b64_password + b"\r\n")
         ans = self.reader(socket)
         sys.stderr.write(ans)
-        if ans[0:3] == '235':
+        if ans[0:3] == "235":
             print("\nAuth is success\n")
         else:
             print("\nAuth is unsuccess\n")
@@ -174,8 +170,7 @@ class SMTP:
 
     def body_letter_pipelining(self, socket):
         rcpt_to_template = "rcpt to: <{0}>\r\n"
-        PIPELINING_command = "mail from: <{0}>".format(self.login) + '\r\n'
-        # for adr in self.rcpt_to.split(' '):
+        PIPELINING_command = "mail from: <{0}>".format(self.login) + "\r\n"
         PIPELINING_command += rcpt_to_template.format(self.rcpt_to)
         PIPELINING_command += "data\r\n"
         socket.send(PIPELINING_command.encode())
@@ -192,7 +187,7 @@ class SMTP:
         socket.close()
 
     def body_letter(self, socket):
-        mail_from = "mail from: <{0}>\r\n".format('anonymous@hacker.net')
+        mail_from = "mail from: <{0}>\r\n".format("anonymous@hacker.net")
         socket.send(mail_from.encode())
         ans = self.reader(socket)
         sys.stderr.write(ans)
@@ -200,12 +195,12 @@ class SMTP:
         socket.send(rcpt_to.encode())
         ans = self.reader(socket)
         sys.stderr.write(ans)
-        socket.send(b'data\r\n')
+        socket.send(b"data\r\n")
         ans = self.reader(socket)
         sys.stderr.write(ans)
         data = self.get_data().encode()
         socket.send(data)
-        socket.send(b'.\r\n')
+        socket.send(b".\r\n")
         ans = self.reader(socket)
         sys.stderr.write(ans)
         if ans[0:3] == "250":
@@ -217,7 +212,6 @@ class SMTP:
         start_template = "From: Good Guy <{0}>\r\n"
         to_template = ""
         for_who = "To: Bad Guy <{0}>\r\n"
-        # for adr in self.rcpt_to.split(' '):
         to_template += for_who.format(self.rcpt_to)
         message_template = ("Subject: Get It !\r\n"
                             "Content-Type: multipart/mixed; boundary=xyz\r\n"
@@ -243,14 +237,12 @@ class SMTP:
             counter += 1
             if counter == len(dict_images):
                 files_template += image_b64_template.format(f[f.index(".")+1:], f) +\
-                                  "\r\n" + str(dict_images[f].decode("UTF-8")) + '\r\n' + '--xyz--\r\n'
+                                  "\r\n" + str(dict_images[f].decode("UTF-8")) + "\r\n" + "--xyz--\r\n"
             else:
                 files_template += image_b64_template.format(f[f.index(".")+1:], f) +\
-                                  "\r\n" + str(dict_images[f].decode("UTF-8")) + '\r\n' + '--xyz\r\n'
+                                  "\r\n" + str(dict_images[f].decode("UTF-8")) + "\r\n" + "--xyz\r\n"
         final_template = start_template.format(self.login) + to_template +\
                          message_template + attachments + files_template
-        # with open("check.txt", "w") as t:
-        #     t.write(final_template)
         return final_template
 
     def ehlo(self, s):
@@ -258,24 +250,22 @@ class SMTP:
             s.send(b"EHLO Savi\r\n")
             ans = self.reader(s)
             sys.stderr.write(ans)
-            if ans[0:3] == '250':
-                print('\nIntroduce is success\n')
+            if ans[0:3] == "250":
+                print("\nIntroduce is success\n")
             else:
                 raise ValueError
-        except Exception as er:
+        except Exception:
             print("\nWe are unable to introduce yourself to the server\n")
-            # print(er)
             sys.exit()
 
     def reader(self, s):
-        ans = b''
+        ans = b""
         while True:
             try:
                 temp = s.recv(1024)
                 if temp:
                     ans += temp
-            except Exception as er:
-                # print(er)
+            except Exception:
                 break
         return ans.decode("UTF-8")
 
@@ -284,11 +274,10 @@ def main():
     try:
         p = createParser()
         args = p.parse_args()
-        s = SMTP(args.IP, args.PORT, args.e_mail, args.PATH.replace('\\', '/'), args.Defense, args.Login, args.Pass)
+        s = SMTP(args.IP, args.PORT, args.e_mail, args.PATH.replace("\\", "/"), args.Defense, args.Login, args.Pass)
         s.send_mail()
-    except Exception as er:
+    except Exception:
         print("\nSad\n")
-        # print(er)
         sys.exit()
 
 if __name__ == "__main__":
