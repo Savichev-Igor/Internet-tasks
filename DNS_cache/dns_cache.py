@@ -7,7 +7,7 @@ import time
 import sys
 import struct
 
-HOST = '127.0.0.1'  # Адрес сервера
+HOST = "127.0.0.1"  # Адрес сервера
 PORT = 53  # Порт сервера
 
 
@@ -16,7 +16,7 @@ cache = dict()  # Наш кэш
 
 def createParser():
     parser = argparse.ArgumentParser(
-            prog='python dns_cache.py',
+            prog="python dns_cache.py",
             description="""Эта программа выполняет функции кэширующего DNS сервера
                            на 127.0.0.1 8000
                         """,
@@ -31,7 +31,7 @@ def createParser():
     return parser
 
 
-class DNS_Packet():     # Класс для работы с DNS пакетом
+class DNS_Packet():  # Класс для работы с DNS пакетом
 
     def __init__(self, data):
         """ Типичный конструктор класса... """
@@ -46,8 +46,8 @@ class DNS_Packet():     # Класс для работы с DNS пакетом
 
     def get_header(self):
         """ В этой функции извлекаем HEADER запроса """
-        self.data_HEADER = struct.unpack('!HHHHHH', self.data[0:12])
-        # return struct.unpack('!HHHHHH', self.data[0:12])
+        self.data_HEADER = struct.unpack("!HHHHHH", self.data[0:12])
+        return self.data_HEADER
 
     def set_id(self, ID):
         reply_ID = struct.pack("!H", ID)
@@ -58,12 +58,12 @@ class DNS_Packet():     # Класс для работы с DNS пакетом
         name_length = 0
         for i in self.data[12:]:
             name_length += 1
-            if i == 0 or i == struct.pack('B', 0):
+            if i == 0 or i == struct.pack("B", 0):
                 break
-        name = self.data[12:12+name_length]
+        name = self.data[12:12 + name_length]
         self.len_name = name_length
-        self.QNAME = struct.unpack(str(self.len_name)+'s', name)
-        # return struct.unpack(str(self.len_name)+'s', name)
+        self.QNAME = struct.unpack(str(self.len_name) + "s", name)
+        return self.QNAME
 
     def get_type(self, part):
         """ Здесь получаем тип для запроса или ответа """
@@ -85,14 +85,14 @@ class DNS_Packet():     # Класс для работы с DNS пакетом
             15: 'MX',
             16: 'TXT'
         }
-        if part == 'QUESTION':
-            type_of_query = struct.unpack('!H', self.data[12+self.len_name:12+self.len_name+2])[0]
+        if part == "QUESTION":
+            type_of_query = struct.unpack("!H", self.data[12 + self.len_name:12 + self.len_name + 2])[0]
             self.QTYPE = types[type_of_query]
-            # return types[type_of_query]
-        if part == 'ANSWER':
-            type_of_answer = struct.unpack('!H', self.data[12+self.len_name+4+2:12+self.len_name+4+4])[0]
+            return self.QTYPE
+        if part == "ANSWER":
+            type_of_answer = struct.unpack("!H", self.data[12 + self.len_name + 4 + 2:12 + self.len_name + 4 + 4])[0]
             self.ATYPE = types[type_of_answer]
-            # return types[type_of_answer]
+            return self.ATYPE
 
     def get_class(self, part):
         """ Аналогично получаем класс для запроса или ответа """
@@ -102,48 +102,45 @@ class DNS_Packet():     # Класс для работы с DNS пакетом
             3: 'CH',
             4: 'HS',
         }
-        if part == 'QUESTION':
-            class_of_query = struct.unpack('!H', self.data[12+self.len_name+2:12+self.len_name+4])[0]
+        if part == "QUESTION":
+            class_of_query = struct.unpack("!H", self.data[12 + self.len_name + 2:12 + self.len_name + 4])[0]
             self.QCLASS = classes[class_of_query]
-            # return classes[class_of_query]
-        if part == 'ANSWER':
-            class_of_answer = struct.unpack('!H', self.data[12+self.len_name+4+4:12+self.len_name+4+6])[0]
+            return self.QCLASS
+        if part == "ANSWER":
+            class_of_answer = struct.unpack("!H", self.data[12 + self.len_name + 4 + 4:12 + self.len_name + 4 + 6])[0]
             self.ACLASS = classes[class_of_answer]
-            # return classes[class_of_answer]
+            return self.ACLASS
 
     def set_q_name(self, name):
-        """ Здесь мы немного меняем имя, а точнее убираем '\x03www.'
+        """ Здесь мы немного меняем имя, а точнее убираем "\x03www."
             из первоначального запроса, чтобы не делать лишних заросов к
             форвардеру, и чтобы кэш понимал, что www.e1.ru и e1.ru одно
             и тоже """
         self.QNAME = name,
-        self.data = self.data[:12] + struct.pack(str(len(name))+"s", name) + self.data[12+self.len_name:]
+        self.data = self.data[:12] + struct.pack(str(len(name)) + "s", name) + self.data[12 + self.len_name:]
         self.len_name = len(name)
 
     def get_ttl(self, begin, end):
         """ Получаем TTL ответа """
-        # self.TTL = struct.unpack('!I', self.data[12+self.len_name+4+6:12+self.len_name+4+10])
-        return struct.unpack('!I', self.data[begin:end])[0]
+        return struct.unpack("!I", self.data[begin:end])[0]
 
     def get_rdata_len(self, begin, end):
         """ Получаем длину RDATA """
-        return struct.unpack('!H', self.data[begin:end])[0]
+        return struct.unpack("!H", self.data[begin:end])[0]
 
     def set_ttl(self, cache_time, cache_ttl):
         """ Устанавливаем новый TTL для каждого ответа """
-        begin = 12 + self.len_name + 4 + 10    # Сдвиги для получения RDATA_len
+        begin = 12 + self.len_name + 4 + 10  # Сдвиги для получения RDATA_len
         end = 12 + self.len_name + 4 + 12
-        for ans in range(self.data_HEADER[3]):    # Количество ответов
+        for ans in range(self.data_HEADER[3]):  # Количество ответов
             RD_len = self.get_rdata_len(begin, end)
-            # print(RD_len)
-            # print(self.get_ttl(begin-4, end-2))
-            new_ttl = struct.pack('!I', int(cache_ttl - time.time() + cache_time))
-            self.data = self.data[0:begin-4] + new_ttl + self.data[end-2:]
+            new_ttl = struct.pack("!I", int(cache_ttl - time.time() + cache_time))
+            self.data = self.data[0:begin - 4] + new_ttl + self.data[end - 2:]
             begin += RD_len + 12
             end += RD_len + 12
 
     def parse_query(self):
-        """ Просто функция обработки запроса"""
+        """ Просто функция обработки запроса """
         self.get_header()
         self.get_q_name()
         # self.get_type('QUESTION')
@@ -162,8 +159,8 @@ class DNS_Server(threading.Thread):
     def __init__(self, data, client, forwarder, f_port, s_UDP):
         threading.Thread.__init__(self)
         self.daemon = True
-        self.data = data    # Оригинальный запрос
-        self.client = client    # Кому отвечать
+        self.data = data  # Оригинальный запрос
+        self.client = client  # Кому отвечать
         self.forwarder = forwarder
         self.f_port = f_port
         self.s_UDP = s_UDP
@@ -182,18 +179,12 @@ class DNS_Server(threading.Thread):
             begin = 12 + response_packet.len_name + 4 + 6
             end = 12 + response_packet.len_name + 4 + 10
             cache[key] = [response_packet, time.time(), response_packet.get_ttl(begin, end)]
-            # print(cache)
         except socket.error:
             print("Wait a momemnt...")
 
     def run(self):
         request = DNS_Packet(self.data)
-        request.parse_query()     # Первично обработали пакет
-        # if b'\x03www' in request.QNAME[0]:
-            # print('here_1')
-            # print(request.data)
-            # request.set_q_name(request.QNAME[0][4:])
-            # print(request.data,)
+        request.parse_query()  # Первично обработали пакет
         key = request.data[2:]
         if key in cache:
             cache_data = cache[key][0].data
@@ -217,19 +208,17 @@ def main():
     try:
         p = createParser()
         args = p.parse_args()
-        if args.forwarder == '127.0.0.1' and args.f_port == PORT:
-            args.forwarder = '8.8.8.8'
+        if args.forwarder == "127.0.0.1" and args.f_port == PORT:
+            args.forwarder = "8.8.8.8"
             args.f_port = 53
         s_UDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s_UDP.bind((HOST, PORT))
         while True:
             data, addr = s_UDP.recvfrom(4096)
-            # print(data, addr)
-            # print(cache)
             DNS_Server(data, addr, args.forwarder, args.f_port, s_UDP).start()
-    except Exception as error:
+    except Exception as e:
         s_UDP.close()
-        print(error)
+        print(e)
         sys.exit(0)
 
 if __name__ == "__main__":
