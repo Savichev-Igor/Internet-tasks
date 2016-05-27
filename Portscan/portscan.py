@@ -1,9 +1,9 @@
 # !/usr/bin/python
 # -*- coding: utf-8 -*-
-import socket
 import argparse
-import struct
 import re
+import socket
+import struct
 
 from errno import ECONNREFUSED
 from multiprocessing import Pool
@@ -11,7 +11,7 @@ from multiprocessing import Pool
 
 def createParser():
     parser = argparse.ArgumentParser(
-            prog='python portscan.py',
+            prog="python portscan.py",
             description="""Эта программа сканирует TCP/UDP порты.
                         """,
             epilog='''(c) Puni, 2015. Автор программы, как всегда,
@@ -101,15 +101,14 @@ class Portscan:
         self.s_TCP.settimeout(0.1)
         try:
             self.con = self.s_TCP.connect((self.ip_addr, port))
-            result = port, 'unknown'
+            result = port, "unknown"
             for packet in Portscan.PACKETS:
                 try:
                     self.s_TCP.sendall(Portscan.PACKETS[packet])
                     data = self.s_TCP.recv(1024)
                     result = port, self.which_proto(data)
                     break
-                except socket.error as msg_1:
-                    # print(msg_1)
+                except socket.error:
                     continue
             try:
                 self.con.close()
@@ -117,9 +116,8 @@ class Portscan:
             except:
                 pass
             return result
-        except socket.error as msg_2:
-            # print(msg_2)
-            if msg_2.errno == ECONNREFUSED:
+        except socket.error as e:
+            if e.errno == ECONNREFUSED:
                 return False
 
     def check_UDP(self, port):
@@ -128,27 +126,24 @@ class Portscan:
         try:
             self.s_UDP.sendto(b"LOL", (self.ip_addr, port))
             try:
-                f_data = self.s_UDP.recv(1024)
-                result = port, 'unknown'
+                self.s_UDP.recv(1024)
+                result = port, "unknown"
                 for packet in Portscan.PACKETS:
                     try:
                         self.s_UDP.sendto(Portscan.PACKETS[packet], (self.ip_addr, port))
                         data = self.s_UDP.recv(1024)
                         result = port, self.which_proto(data)
                         break
-                    except socket.error as msg_1:
-                        # print(mgs_1)
+                    except socket.error:
                         continue
-            except socket.error as msg_2:
-                # print(msg_2)
+            except socket.error:
                 return False
             try:
                 self.s_UDP.close()
             except:
                 pass
             return result
-        except socket.error as msg_3:
-            # print(msg_3)
+        except socket.error:
             return False
 
     def is_dns(self, data):
@@ -205,24 +200,24 @@ class Portscan:
         elif self.is_ntp(data):
             return "ntp"
         else:
-            return 'unknown'
+            return "unknown"
 
 
 def main():
     p = createParser()
     args = p.parse_args()
-    PORTS = args.PORTS.split('-')
+    PORTS = args.PORTS.split("-")
     start = int(PORTS[0])
-    end = int(PORTS[1])+1
+    end = int(PORTS[1]) + 1
     print()
     p = Pool(500)
     s = Portscan(args.HOST)
     result_TCP = list(filter(bool, p.map(s.check_TCP, range(start, end))))  # All ports and + 1
     result_UDP = list(filter(bool, p.map(s.check_UDP, range(start, end))))  # All ports and + 1
     for res in result_TCP:
-        print(str(res) + ' TCP port is Open')
+        print(str(res) + " TCP port is Open")
     for res in result_UDP:
-        print(str(res) + ' UDP port is Open')
+        print(str(res) + " UDP port is Open")
 
 if __name__ == "__main__":
     main()
