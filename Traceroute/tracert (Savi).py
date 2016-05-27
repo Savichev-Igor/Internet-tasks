@@ -11,7 +11,7 @@ import struct
 
 def createParser():
     parser = argparse.ArgumentParser(
-            prog='python traceroute.py',
+            prog="python traceroute.py",
             description="""Эта программа аналог Tracerout'a,
                            (Tracert).
                         """,
@@ -19,7 +19,7 @@ def createParser():
                        не несет никакой ответственности.
                    '''
             )
-    parser.add_argument('destination', type=str,
+    parser.add_argument("destination", type=str,
                         help="Ip адрес для трассировки")
     parser.add_argument("--Hops", "-H", type=int, default=30,
                         help="количество хопов")
@@ -28,16 +28,16 @@ def createParser():
 
 def take_packet():
     packet = struct.Struct("BBHHH")
-    bin_packet = packet.pack(8, 0, 0xfff7, 0, 0)    # 65 527
+    bin_packet = packet.pack(8, 0, 0xfff7, 0, 0)  # 65 527
     return bin_packet
 
 
 class Traceroute:
 
-    regexp_iana = re.compile('whois:(.+)')
-    regexp_reg_AS = re.compile('origin:.+as(\d+)')
-    regexp_reg_country = re.compile('country:(.+)')
-    regexp_reg_provider = re.compile('descr:(.+)')
+    regexp_iana = re.compile("whois:(.+)")
+    regexp_reg_AS = re.compile("origin:.+as(\d+)")
+    regexp_reg_country = re.compile("country:(.+)")
+    regexp_reg_provider = re.compile("descr:(.+)")
 
     def __init__(self, dest_name, max_hops):
         self.dest_addr = socket.gethostbyname(dest_name)
@@ -89,13 +89,13 @@ class Traceroute:
         self.s.close()
 
     def whois_iana(self, ip_addr):
-        ip_addr += '\r\n'
+        ip_addr += "\r\n"
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.connect(("whois.iana.org", 43))
         except:
             return None
-        # s.setblocking(0)    # Если не может прочитать - кидает эксепшн
+        # s.setblocking(0)  # Если не может прочитать - кидает эксепшн
         buf = self.reader(s, ip_addr)
         res = Traceroute.regexp_iana.search(buf)
         try:
@@ -106,10 +106,10 @@ class Traceroute:
 
     def whois_region(self, server, ip_addr):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ip_addr += '\r\n'
+        ip_addr += "\r\n"
         s.connect((server, 43))
         # try:
-        #     print(s.recv(1024))    # Приветствие пропустили
+        #     print(s.recv(1024))  # Приветствие пропустили
         # except:
         #     pass
         buf = self.reader(s, ip_addr)
@@ -130,7 +130,7 @@ class Traceroute:
         try:
             dict_info["provider"] = provider.groups()[0].strip().upper()
         except:
-            dict_info['provider'] = "***"
+            dict_info["provider"] = "***"
         return dict_info
 
     def reader(self, s, ip_addr):
@@ -140,7 +140,7 @@ class Traceroute:
             while True:
                 temp = s.recv(1024)
                 if len(temp) > 0:
-                    buf += temp.decode('utf-8')
+                    buf += temp.decode("utf-8")
                 else:
                     break
         except socket.error:
